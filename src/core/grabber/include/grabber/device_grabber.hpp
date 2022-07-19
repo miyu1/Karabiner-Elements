@@ -683,7 +683,25 @@ private:
                   : device_state::ungrabbed);
         }
 
-        if (!entry->get_disabled()) {
+        // if builtin trackpad event is grabbed, ignore these events
+        // which makes trackpad diabled.
+        // if not ignore grabbed trackpad event, trackpad works like mouse(no multi-touch).  
+        bool ignore_event = false;
+        if (e.get_event_origin() == event_origin::grabbed_device) {
+          auto it = entries_.find(e.get_device_id());
+          if (it != std::end(entries_) ) {
+            const std::string& shortname = it->second->get_device_short_name();
+            auto props = it->second->get_device_properties();
+            auto isTrackpad = props->get_is_pointing_device();
+            if (shortname == "Apple Internal Keyboard / Trackpad") {
+              if (isTrackpad && *isTrackpad){
+                ignore_event = true;
+              }
+            }
+          }
+        }
+
+        if (!entry->get_disabled() && !ignore_event) {
           event_queue::entry qe(e.get_device_id(),
                                 e.get_event_time_stamp(),
                                 e.get_event(),
